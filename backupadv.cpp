@@ -61,7 +61,7 @@ int main(){
         break;
     }
 
-    zipUp(backupDir);
+    zipUp(backupdir);
     root.close();
 }
 

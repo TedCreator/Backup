@@ -6,19 +6,51 @@
 using namespace std;
 
 ofstream root;
+string backupdir = R"(C:\Games\BACKUP\)";
+string rootdir = backupdir + "gamelocations.txt";
 string backuploc;
+
+
+string searchGames(string name){
+    ifstream root;
+    root.open(rootdir);
+    size_t pos;
+    string line;
+    int count = 1;
+    if(root.is_open()){
+        while(getline(root, line)){
+            pos = line.find(name);
+            if(pos!=string::npos){
+                return line; 
+            }
+            count++;
+        }
+    }
+    root.close();
+    return "";
+}
 
 void addGame(){
     string input;
     string game;
     cout << "Enter the name of the game: ";
     cin >> input;
-    game = input + "{";
-    cout << "Enter game save folder you want backed up: ";
-    cin >> input;
-    game += input + "}\n";
-    root << game;
+    cout << searchGames(input).size();
+    if(searchGames(input).size() < 1){
+        game = input + "{";
+        cout << "Enter game save folder you want backed up: ";
+        cin.ignore();
+        getline(cin, input);
+        game += input + "}\n";
+        root << game;
+    } else { 
+        cout << "Game already exists with path: ";
+    }
+
 }
+void editGame(){  
+}
+
 
 void zipUp(string saveloc){
     time_t tt = chrono::system_clock::to_time_t(chrono::system_clock::now());
@@ -35,7 +67,8 @@ void zipUp(string saveloc){
 }
 
 int main(){
-    string backupdir = R"(C:\Games\BACKUP\)";
+    cout << searchGames("Wonderlands") << endl;
+    
     string appRoot = R"()";
     
     if(!filesystem::exists(backupdir + "gamelocations.txt")) {
@@ -45,7 +78,7 @@ int main(){
     }
     
     char userOption;
-    cout << "0. Enter a new game" << endl << "-. Go to previous page" << endl << "+. Go to next page" << endl << "Select an option: ";
+    cout << "0. Add/Edit Game" << endl << "-. Go to previous page" << endl << "+. Go to next page" << endl << "Select an option: ";
     cin >> userOption;
     switch(userOption){
         case '0':
@@ -61,7 +94,7 @@ int main(){
         break;
     }
 
-    zipUp(backupdir);
+    // zipUp(backupdir);
     root.close();
 }
 

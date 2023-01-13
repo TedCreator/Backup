@@ -6,10 +6,10 @@
 using namespace std;
 
 ofstream root;
-string backupdir = R"(C:\Games\BACKUP\)";
+string userenv = getenv("USERPROFILE");
+string backupdir = userenv + R"(\Documents\BACKUP\)";
 string rootdir = backupdir + "gamelocations.txt";
 string backuploc;
-
 
 string searchGames(string name){
     ifstream root;
@@ -29,22 +29,22 @@ string searchGames(string name){
     root.close();
     return "";
 }
-
 void addGame(){
     string input;
     string game;
     cout << "Enter the name of the game: ";
     cin >> input;
-    cout << searchGames(input).size();
-    if(searchGames(input).size() < 1){
-        game = input + "{";
+    string searchedGame = searchGames(input);
+    if(searchedGame.size() < 1){
+        game = input + " {";
         cout << "Enter game save folder you want backed up: ";
         cin.ignore();
         getline(cin, input);
         game += input + "}\n";
         root << game;
     } else { 
-        cout << "Game already exists with path: ";
+        // cout << searchedGame << searchedGame.size();
+        cout << "Game " + input + " already exists with path: " << searchedGame.substr(input.size() + 2, (searchedGame.size() - (input.size() + 2)) - 1);
     }
 
 }
@@ -59,7 +59,6 @@ void zipUp(string saveloc){
     string date = to_string(utc_tm.tm_mon + 1) + "-" + to_string(utc_tm.tm_mday) + "-" + to_string(utc_tm.tm_year + 1900) 
                 + "-" + to_string(utc_tm.tm_hour-5) + "h" + to_string(utc_tm.tm_min) + "m" + to_string(utc_tm.tm_sec) + "s";
     
-
     //change to use tar command
     string cmd = "cd " + saveloc + " & 7z a " + date + ".zip";
     cmd += " & move \"" + date + ".zip\" " + backuploc;
@@ -67,35 +66,35 @@ void zipUp(string saveloc){
 }
 
 int main(){
-    cout << searchGames("Wonderlands") << endl;
-    
-    string appRoot = R"()";
-    
-    if(!filesystem::exists(backupdir + "gamelocations.txt")) {
-        root.open(backupdir + "gamelocations.txt");
-    } else {
-        root.open(backupdir + "gamelocations.txt", ios::app);
-    }
-    
-    char userOption;
-    cout << "0. Add/Edit Game" << endl << "-. Go to previous page" << endl << "+. Go to next page" << endl << "Select an option: ";
-    cin >> userOption;
-    switch(userOption){
-        case '0':
-            addGame();
-        break;
+    char userOption = ' ';
+while(userOption != 'q'){
+        if(!filesystem::exists(backupdir + "gamelocations.txt")) {
+            root.open(backupdir + "gamelocations.txt");
+        } else {
+            root.open(backupdir + "gamelocations.txt", ios::app);
+        }
+        
+        cout << endl << "0. Add/Edit Game" << endl << "-. Go to previous page" << endl << "+. Go to next page" << endl << "q to quit" << endl << "Select an option: ";
+        cin >> userOption;
+        switch(userOption){
+            case '0':
+                addGame();
+            break;
 
-        case '-':
+            case '-':
 
-        break;
+            break;
 
-        case '+':
+            case '+':
 
-        break;
-    }
+            break;
+            case 'q':
+            exit(0);
+        }
 
-    // zipUp(backupdir);
-    root.close();
+        // zipUp(backupdir);
+        root.close();
+}
 }
 
 

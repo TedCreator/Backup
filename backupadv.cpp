@@ -56,13 +56,13 @@ class Game {
         const string toString(){
             string ret;
             ret += to_string(line); 
-            ret += " " + name + ":" + savepath;
+            ret += " " + name + " : " + savepath;
             return ret;
         }
 };
 vector<Game> games;
 
-string searchGames(string name){
+string searchRoot(string name){
     ifstream root;
     root.open(rootdir);
     size_t pos;
@@ -80,6 +80,15 @@ string searchGames(string name){
     root.close();
     return "";
 }
+Game searchGames(string game){
+   for(auto & element : games){
+        if(element.getName() == game){
+            return element;
+        }
+    }
+    return Game(0, "", "");
+}
+//TODO edit to use searchGames instead of searchRoot
 void addGame(){
     root.open(rootdir, ios::app);
     string input;
@@ -88,7 +97,7 @@ void addGame(){
     cout << "Enter the name of the game: ";
     cin >> input;
     newGame.setName(input);
-    string searchedGame = searchGames(input);
+    string searchedGame = searchRoot(input);
     if(searchedGame.size() < 1){
         game = input + "{";
         cout << "Enter game save folder you want backed up: ";
@@ -104,10 +113,19 @@ void addGame(){
 
 }
 void editGame(string game){  
-
+    cout <<
+    for(auto & element : games){
+        if(element.getName() == game){
+            
+        }
+    }
 }
-void deleteGame(){
-
+void deleteGame(string game){
+    for(auto & element : games){
+        if(element.getName() == game){
+            games.erase(games.begin()+element.getLine() - 1);
+        }
+    }
 }
 void fillVector(){
     string line;
@@ -119,8 +137,6 @@ void fillVector(){
     while (getline(root, line)) {  
         pos = line.find('{');
         name = line.substr(0, pos);
-        // newGame.setName(div);
-        // cout << line;
         path = line.substr(pos + 1);
         path = path.substr(0, path.size() - 1);
         newGame = Game(count, name, path);
@@ -146,23 +162,17 @@ int main(){
     char userOption = ' ';
     root.open(rootdir, ios::in);
     fillVector();
+    deleteGame("Wonderlands");
     for(Game i: games){
         cout << i.toString() << endl;
     }
     while(userOption != 'q'){
-        cout << endl << "0. Add/Edit Game" << endl << "-. Go to previous page" << endl << "+. Go to next page" << endl << "q. to quit" << endl << "Select an option: ";
+        cout << endl << "0. Add/Edit Game" << endl << "-. Go to previous page" << endl << "q. to quit" << endl << "Select an option: ";
+        //<< "+. Go to next page" << endl 
         cin >> userOption;
         switch(userOption){
             case '0':
                 addGame();
-            break;
-
-            case '-':
-            
-            break;
-
-            case '+':
-
             break;
             case 'q':
             exit(0);

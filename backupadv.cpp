@@ -91,25 +91,6 @@ Game searchGames(string game){
     }
     return Game(0, "", "");
 }
-void addGame(){
-    string input;
-    string game;
-    Game newGame;
-    cout << "Enter the name of the game: ";
-    cin >> input;
-    newGame.setName(input);
-    string searchedGame = searchGames(input).getName();
-    if(searchedGame.size() < 1){
-        newGame.setName(input);
-        cout << "Enter game save folder you want backed up: ";
-        cin >> input;
-        newGame.setPath(input);
-        games.push_back(newGame);
-    } else { 
-        cout << "Game " + input + " already exists with path: " << searchedGame.substr(input.size() + 2, (searchedGame.size() - (input.size() + 2)) - 1) << endl;
-        cout << " Editing.";
-    }
-}
 void editGame(string game){  
     string newName;
     for(auto & element : games){
@@ -119,7 +100,54 @@ void editGame(string game){
             if(newName != ""){
                 element.setName(newName);
             }
+            cout << "To keep path, enter nothing and press enter." << endl << "Edit the game path: ";
+            
         }
+    }
+}
+void findPosInVector(Game game){
+    for(int i = 0; i < games.size(); i++){
+        if(games.at(i).getName() == game.getName()){
+            games[i] = game;
+        }
+    }
+    cout << game.toString();
+}
+Game editGame(Game game){
+    string newName;
+    string newPath;
+    cout << "To keep name, enter x and press enter." << endl << "Edit the game name: ";
+    cin >> newName;
+    if(newName != "x"){
+        game.setName(newName);
+    }
+    cout << "To keep path, enter x and press enter." << endl << "Edit the game path: ";
+    cin >> newPath;
+    if(newPath != "x"){
+        game.setPath(newPath);
+    }
+    // cout << "New game entry is: " << game.toString() << endl;
+    return game;
+}
+
+void addGame(){
+    string input;
+    string game;
+    Game newGame;
+    cout << "Enter the name of the game: ";
+    cin >> input;
+    newGame.setName(input);
+    Game searchedGame = searchGames(input);
+    if(searchedGame.getName().size() < 1){
+        newGame.setName(input);
+        cout << "Enter game save folder you want backed up: ";
+        cin >> input;
+        newGame.setPath(input);
+        games.push_back(newGame);
+    } else { 
+        cout << "Game " + input + " already exists with path: " << searchedGame.getPath() << endl;
+        cout << "Editing." << endl;
+        findPosInVector(editGame(searchedGame));
     }
 }
 void deleteGame(string game){
@@ -178,11 +206,14 @@ int main(){
     while(userOption != 'q'){
         cout << endl << "0. Add/Edit Game" << endl << "s. to save changes" << endl <<
              "q. to quit" << endl << "x. to save and quit" << endl << "Select an option: ";
-        //<< "+. Go to next page" << endl 
+
         cin >> userOption;
         switch(userOption){
             case '0':
                 addGame();
+                for(Game i: games){
+        cout << i.toCommit() << endl;
+    }
             break;
             case 's':
                 commit();
@@ -196,6 +227,3 @@ int main(){
         // userOption = 'q';
     }
 }
-
-
-

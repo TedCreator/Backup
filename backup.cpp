@@ -3,7 +3,7 @@
 #include <iostream>
 using namespace std;
 
-
+//This file is here to show the general idea of the main algorithm and idea for the program. 
 
 int main(){
     time_t tt = chrono::system_clock::to_time_t(chrono::system_clock::now());

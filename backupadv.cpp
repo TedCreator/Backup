@@ -53,6 +53,9 @@ class Game {
         ~Game(){
 
         }
+        string toCommit(){
+            return name + "{" + savepath + "}";
+        }
         const string toString(){
             string ret;
             ret += to_string(line); 
@@ -88,35 +91,34 @@ Game searchGames(string game){
     }
     return Game(0, "", "");
 }
-//TODO edit to use searchGames instead of searchRoot
 void addGame(){
-    root.open(rootdir, ios::app);
     string input;
     string game;
     Game newGame;
     cout << "Enter the name of the game: ";
     cin >> input;
     newGame.setName(input);
-    string searchedGame = searchRoot(input);
+    string searchedGame = searchGames(input).getName();
     if(searchedGame.size() < 1){
-        game = input + "{";
+        newGame.setName(input);
         cout << "Enter game save folder you want backed up: ";
-        cin.ignore();
-        getline(cin, input);
+        cin >> input;
         newGame.setPath(input);
-        game += input + "}\n";
-        root << game;
+        games.push_back(newGame);
     } else { 
         cout << "Game " + input + " already exists with path: " << searchedGame.substr(input.size() + 2, (searchedGame.size() - (input.size() + 2)) - 1) << endl;
         cout << " Editing.";
     }
-
 }
 void editGame(string game){  
-    cout <<
+    string newName;
     for(auto & element : games){
         if(element.getName() == game){
-            
+            cout << "To keep name, enter nothing and press enter." << endl << "Edit the game name: ";
+            cin >> newName;
+            if(newName != ""){
+                element.setName(newName);
+            }
         }
     }
 }
@@ -128,6 +130,7 @@ void deleteGame(string game){
     }
 }
 void fillVector(){
+    root.open(rootdir, ios::in);
     string line;
     int pos;
     string name;
@@ -142,6 +145,14 @@ void fillVector(){
         newGame = Game(count, name, path);
         games.push_back(newGame);
         count++;
+    }
+    root.close();
+}
+void commit(){
+    root.open(rootdir, ios::out);
+    for(auto & element : games){
+        root.clear();
+        root << element.toCommit() << endl;
     }
     root.close();
 }
@@ -160,27 +171,30 @@ void zipUp(string saveloc, string backloc){
 
 int main(){
     char userOption = ' ';
-    root.open(rootdir, ios::in);
     fillVector();
-    deleteGame("Wonderlands");
     for(Game i: games){
-        cout << i.toString() << endl;
+        cout << i.toCommit() << endl;
     }
     while(userOption != 'q'){
-        cout << endl << "0. Add/Edit Game" << endl << "-. Go to previous page" << endl << "q. to quit" << endl << "Select an option: ";
+        cout << endl << "0. Add/Edit Game" << endl << "s. to save changes" << endl <<
+             "q. to quit" << endl << "x. to save and quit" << endl << "Select an option: ";
         //<< "+. Go to next page" << endl 
         cin >> userOption;
         switch(userOption){
             case '0':
                 addGame();
             break;
+            case 's':
+                commit();
+            break;
+            case 'x':
+                commit();
+                exit(0);
             case 'q':
-            exit(0);
+                exit(0);
         }
-        userOption = 'q';
+        // userOption = 'q';
     }
-    
-    root.close();
 }
 
 

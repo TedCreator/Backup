@@ -59,51 +59,27 @@ class Game {
         const string toString(){
             string ret;
             ret += to_string(line); 
-            ret += " " + name + " : " + savepath;
+            ret += ". " + name + " : " + savepath;
             return ret;
         }
 };
 vector<Game> games;
-
-string searchRoot(string name){
-    ifstream root;
-    root.open(rootdir);
-    size_t pos;
-    string line;
-    int count = 1;
-    if(root.is_open()){
-        while(getline(root, line)){
-            pos = line.find(name);
-            if(pos!=string::npos){
-                return line; 
-            }
-            count++;
-        }
+string stlow(string str){
+    char ch;
+    string ret = "";
+    for (int i = 0; i < str.size(); i++) {
+        ret += tolower(str.at(i));
     }
-    root.close();
-    return "";
+    return ret;
 }
+
 Game searchGames(string game){
    for(auto & element : games){
-        if(element.getName() == game){
+        if(stlow(element.getName()) == stlow(game)){
             return element;
         }
     }
     return Game(0, "", "");
-}
-void editGame(string game){  
-    string newName;
-    for(auto & element : games){
-        if(element.getName() == game){
-            cout << "To keep name, enter nothing and press enter." << endl << "Edit the game name: ";
-            cin >> newName;
-            if(newName != ""){
-                element.setName(newName);
-            }
-            cout << "To keep path, enter nothing and press enter." << endl << "Edit the game path: ";
-            
-        }
-    }
 }
 int findPosInVector(Game game){
     for(int i = 0; i < games.size(); i++){
@@ -116,12 +92,12 @@ int findPosInVector(Game game){
 Game editGame(Game game){
     string newName;
     string newPath;
-    cout << "To keep name, enter x and press enter." << endl << "Edit the game name: ";
+    cout << "To keep name, enter x. " << endl << "Edit the game name: ";
     cin >> newName;
     if(newName != "x"){
         game.setName(newName);
     }
-    cout << "To keep path, enter x and press enter." << endl << "Edit the game path: ";
+    cout << "To keep path, enter x." << endl << "Edit the game path: ";
     cin >> newPath;
     if(newPath != "x"){
         game.setPath(newPath);
@@ -129,7 +105,6 @@ Game editGame(Game game){
     cout << "New game entry is: " << game.toCommit() << endl;
     return game;
 }
-
 void addGame(){
     string input;
     string game;
@@ -151,12 +126,17 @@ void addGame(){
         games.at(findPosInVector(searchedGame)) = newGame;
     }
 }
-void deleteGame(string game){
-    for(auto & element : games){
-        if(element.getName() == game){
-            games.erase(games.begin()+element.getLine() - 1);
-        }
-    }
+void deleteGame(){
+    string game;
+    cout << "What game do you want to delete? " << endl << "Enter the name: ";
+    cin >> game;
+    game = stlow(game);
+    cout << game;
+    // for(auto & element : games){
+    //     if(element.getName() == game){
+    //         games.erase(games.begin()+element.getLine() - 1);
+    //     }
+    // }
 }
 void fillVector(){
     root.open(rootdir, ios::in);
@@ -164,15 +144,13 @@ void fillVector(){
     int pos;
     string name;
     string path;
-    Game newGame;
     int count = 1;
     while (getline(root, line)) {  
         pos = line.find('{');
         name = line.substr(0, pos);
         path = line.substr(pos + 1);
         path = path.substr(0, path.size() - 1);
-        newGame = Game(count, name, path);
-        games.push_back(newGame);
+        games.push_back(Game(count, name, path));
         count++;
     }
     root.close();
@@ -185,7 +163,7 @@ void commit(){
     }
     root.close();
 }
-void zipUp(string saveloc, string backloc, string gameName){
+void zipUp(string saveloc, string gameName){
     time_t tt = chrono::system_clock::to_time_t(chrono::system_clock::now());
     tm utc_tm = *gmtime(&tt);
 
@@ -193,35 +171,43 @@ void zipUp(string saveloc, string backloc, string gameName){
     string fileName = gameName + " " + to_string(utc_tm.tm_mon + 1) + "-" + to_string(utc_tm.tm_mday) + "-" + to_string(utc_tm.tm_year + 1900) 
                 + "-" + to_string(utc_tm.tm_hour-5) + "h" + to_string(utc_tm.tm_min) + "m" + to_string(utc_tm.tm_sec) + "s";
     
-    //change to use tar command, may have to add quotes around stuff
-    string cmd = "cd " + saveloc + " & 7z a " + fileName + ".zip";
-    cmd += " & move \"" + fileName + ".zip\" " + backloc;
+    //change to use tar command
+    string cmd = "cd \"" + saveloc + "\" & 7z a \"" + fileName + ".zip\"";
+    cmd += " & move \"" + fileName + ".zip\" " + backupdir;
     system(cmd.c_str());
 }
+
 int main(){
-    char userOption = ' ';
+    string userOption = " ";
     fillVector();
-    for(Game i: games){
-        cout << i.toCommit() << endl;
+    for(int i = 0; i < games.size(); i++){
+        cout << games.at(i).toString() << endl;
     }
 
-    cout << endl << "0. Add/Edit Game" << endl << "s. to save changes" << endl 
-         << "x. to save and quit" << endl << "q. to quit" << endl << "a. to backup all" << endl;
-    while(userOption != 'q'){
+    cout << endl << "0. Add/Edit Game" << endl << "~. to delete a game" << endl << "s. to save changes" << endl 
+         << "x. to save and quit" << endl << "q. to quit without saving" << endl << "a. to backup all to folder" << endl;
+    while(userOption != "q"){
         cout << "Select an option: ";
         cin >> userOption;
-        switch(userOption){
+        userOption = stlow(userOption);
+        switch(userOption.at(0)){
             case '0':
                 addGame();
                 for(Game i: games){cout << i.toCommit() << endl;}
             break;
-            
+            case '~':
+                deleteGame();
+                
             case 'a':
-                cout << "Backing up games: ";
                 for(Game i: games){
+                    
+                    zipUp(i.getPath(), i.getName());
+                }
+                cout << endl << "Backed up game(s): ";
+                for(Game i : games){ 
                     cout << i.getName() << " ";
                 }
-                cout << endl << "Backed up to path " << backupdir;
+                cout << "to path " << backupdir << endl;
             break;
             case 'x':
                 commit();
@@ -232,9 +218,40 @@ int main(){
             case 'q':
                 exit(0);
             default:
-            
+                int userNum;
+                try {
+                    userNum = stoi(userOption);
+                    if(userNum > games.size()){
+                        cout << "Not a valid game";
+                    } else {
+                        cout << games.at(userNum - 1).toString() << endl;
+                    }
+                } catch (invalid_argument){
+                    cout << "Not a valid input " << endl;
+                }
+                
             break;
         }
-        // userOption = 'q';
+        // userOption = "q"; // for testing 
     }
 }
+
+// wrote but not using
+// string searchRoot(string name){
+//     ifstream root;
+//     root.open(rootdir);
+//     size_t pos;
+//     string line;
+//     int count = 1;
+//     if(root.is_open()){
+//         while(getline(root, line)){
+//             pos = line.find(name);
+//             if(pos!=string::npos){
+//                 return line; 
+//             }
+//             count++;
+//         }
+//     }
+//     root.close();
+//     return "";
+// }

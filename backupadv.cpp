@@ -12,7 +12,7 @@ fstream root;
 string userenv = getenv("USERPROFILE");
 string backupdir = userenv + R"(\Documents\BACKUP\)";
 string rootdir = backupdir + "gamelocations.txt";
-string backuploc;
+string backuploc = "\"" + backupdir + "\"";
 
 class Game {
     public: 
@@ -105,13 +105,13 @@ void editGame(string game){
         }
     }
 }
-void findPosInVector(Game game){
+int findPosInVector(Game game){
     for(int i = 0; i < games.size(); i++){
         if(games.at(i).getName() == game.getName()){
-            games[i] = game;
+            return i;
         }
     }
-    cout << game.toString();
+    return -1;
 }
 Game editGame(Game game){
     string newName;
@@ -126,7 +126,7 @@ Game editGame(Game game){
     if(newPath != "x"){
         game.setPath(newPath);
     }
-    // cout << "New game entry is: " << game.toString() << endl;
+    cout << "New game entry is: " << game.toCommit() << endl;
     return game;
 }
 
@@ -147,7 +147,8 @@ void addGame(){
     } else { 
         cout << "Game " + input + " already exists with path: " << searchedGame.getPath() << endl;
         cout << "Editing." << endl;
-        findPosInVector(editGame(searchedGame));
+        newGame = editGame(searchedGame);
+        games.at(findPosInVector(searchedGame)) = newGame;
     }
 }
 void deleteGame(string game){
@@ -184,45 +185,55 @@ void commit(){
     }
     root.close();
 }
-void zipUp(string saveloc, string backloc){
+void zipUp(string saveloc, string backloc, string gameName){
     time_t tt = chrono::system_clock::to_time_t(chrono::system_clock::now());
     tm utc_tm = *gmtime(&tt);
 
-    string date = to_string(utc_tm.tm_mon + 1) + "-" + to_string(utc_tm.tm_mday) + "-" + to_string(utc_tm.tm_year + 1900) 
+    //file name idea is "nameOfGame month-day-year-?h?m?s"
+    string fileName = gameName + " " + to_string(utc_tm.tm_mon + 1) + "-" + to_string(utc_tm.tm_mday) + "-" + to_string(utc_tm.tm_year + 1900) 
                 + "-" + to_string(utc_tm.tm_hour-5) + "h" + to_string(utc_tm.tm_min) + "m" + to_string(utc_tm.tm_sec) + "s";
     
     //change to use tar command, may have to add quotes around stuff
-    string cmd = "cd " + saveloc + " & 7z a " + date + ".zip";
-    cmd += " & move \"" + date + ".zip\" " + backloc;
+    string cmd = "cd " + saveloc + " & 7z a " + fileName + ".zip";
+    cmd += " & move \"" + fileName + ".zip\" " + backloc;
     system(cmd.c_str());
 }
-
 int main(){
     char userOption = ' ';
     fillVector();
     for(Game i: games){
         cout << i.toCommit() << endl;
     }
-    while(userOption != 'q'){
-        cout << endl << "0. Add/Edit Game" << endl << "s. to save changes" << endl <<
-             "q. to quit" << endl << "x. to save and quit" << endl << "Select an option: ";
 
+    cout << endl << "0. Add/Edit Game" << endl << "s. to save changes" << endl 
+         << "x. to save and quit" << endl << "q. to quit" << endl << "a. to backup all" << endl;
+    while(userOption != 'q'){
+        cout << "Select an option: ";
         cin >> userOption;
         switch(userOption){
             case '0':
                 addGame();
-                for(Game i: games){
-        cout << i.toCommit() << endl;
-    }
+                for(Game i: games){cout << i.toCommit() << endl;}
             break;
-            case 's':
-                commit();
+            
+            case 'a':
+                cout << "Backing up games: ";
+                for(Game i: games){
+                    cout << i.getName() << " ";
+                }
+                cout << endl << "Backed up to path " << backupdir;
             break;
             case 'x':
                 commit();
                 exit(0);
+            case 's':
+            commit();
+            break;
             case 'q':
                 exit(0);
+            default:
+            
+            break;
         }
         // userOption = 'q';
     }

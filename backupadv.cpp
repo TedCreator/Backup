@@ -110,13 +110,14 @@ void addGame(){
     string game;
     Game newGame;
     cout << "Enter the name of the game: ";
-    cin >> input;
+    cin.ignore();
+    getline(cin, input);
     newGame.setName(input);
     Game searchedGame = searchGames(input);
     if(searchedGame.getName().size() < 1){
         newGame.setName(input);
         cout << "Enter game save folder you want backed up: ";
-        cin >> input;
+        getline(cin, input);
         newGame.setPath(input);
         games.push_back(newGame);
     } else { 

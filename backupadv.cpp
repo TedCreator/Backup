@@ -176,7 +176,6 @@ void zipUp(string saveloc, string gameName){
     cmd += " & move \"" + fileName + ".zip\" " + backupdir;
     system(cmd.c_str());
 }
-
 int main(){
     string userOption = " ";
     fillVector();
@@ -197,7 +196,7 @@ int main(){
             break;
             case '~':
                 deleteGame();
-                
+            break;
             case 'a':
                 for(Game i: games){
                     

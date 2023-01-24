@@ -133,11 +133,6 @@ void deleteGame(){
     cin >> game;
     game = stlow(game);
     cout << game;
-    // for(auto & element : games){
-    //     if(element.getName() == game){
-    //         games.erase(games.begin()+element.getLine() - 1);
-    //     }
-    // }
 }
 void fillVector(){
     root.open(rootdir, ios::in);

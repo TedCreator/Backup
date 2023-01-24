@@ -10,7 +10,7 @@ using namespace std;
 
 fstream root;
 string userenv = getenv("USERPROFILE");
-string backupdir = userenv + R"(\Documents\BACKUP\)";
+string backupdir = R"(C:\Games\BACKUP\)";
 string rootdir = backupdir + "gamelocations.txt";
 string backuploc = "\"" + backupdir + "\"";
 
@@ -173,6 +173,7 @@ void zipUp(string saveloc, string gameName){
     system(cmd.c_str());
 }
 int main(){
+    cout << rootdir;
     string userOption = " ";
     fillVector();
     for(int i = 0; i < games.size(); i++){

@@ -126,6 +126,7 @@ void addEntry(){
         entrys.at(findPosInVector(searchedEntry)) = newEntry;
     }
 }
+<<<<<<< HEAD
 void deleteEntry(){
     string entry;
     cout << "What entry do you want to delete? " << endl << "Enter the name: ";
@@ -137,6 +138,14 @@ void deleteEntry(){
     //         entrys.erase(entrys.begin()+element.getLine() - 1);
     //     }
     // }
+=======
+void deleteGame(){
+    string game;
+    cout << "What game do you want to delete? " << endl << "Enter the name: ";
+    cin >> game;
+    game = stlow(game);
+    cout << game;
+>>>>>>> 25db06fcb17d9ee7fbca4322f1aec8e267bb5cd0
 }
 void fillVector(){
     root.open(rootdir, ios::in);

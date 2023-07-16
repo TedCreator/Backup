@@ -9,10 +9,10 @@
 using namespace std;
 
 fstream root;
-string userenv = getenv("USERPROFILE");
-string backupdir = R"(C:\Games\BACKUP\)";
-string rootdir = backupdir + "entrylocations.txt";
-string backuploc = "\"" + backupdir + "\"";
+string userEnv = getenv("USERPROFILE");
+string backupDir = R"(C:\Games\BACKUP\)";
+string rootDir = backupDir + "entrylocations.txt";
+string backupPath = "\"" + backupDir + "\"";
 
 class Entry {
     public: 
@@ -139,7 +139,7 @@ void deleteEntry(){
     // }
 }
 void fillVector(){
-    root.open(rootdir, ios::in);
+    root.open(rootDir, ios::in);
     string line;
     int pos;
     string name;
@@ -156,14 +156,14 @@ void fillVector(){
     root.close();
 }
 void commit(){
-    root.open(rootdir, ios::out);
+    root.open(rootDir, ios::out);
     for(auto & element : entrys){
         root.clear();
         root << element.toCommit() << endl;
     }
     root.close();
 }
-void zipUp(string saveloc, string entryName){
+void archive(string saveloc, string entryName){
     time_t tt = chrono::system_clock::to_time_t(chrono::system_clock::now());
     tm utc_tm = *gmtime(&tt);
 
@@ -173,27 +173,33 @@ void zipUp(string saveloc, string entryName){
 
     //change to use tar command
     string cmd = "cd \"" + saveloc + "\" & 7z a \"" + fileName + ".zip\"";
-    cmd += " & move \"" + fileName + ".zip\" " + backupdir;
+    cmd += " & move \"" + fileName + ".zip\" " + backupDir;
     system(cmd.c_str());
 }
+string prompt(){
+    cout << endl << "0. Add/Edit Entry" << endl << "~. to delete a entry" << endl << "s. to save changes" << endl 
+         << "q. to save and quit" << endl << "x. to quit without saving" << endl << "a. to backup all to folder" << endl;
+    cout << "Select an option: ";
+    string userOption;
+    cin >> userOption;
+    return userOption;
+}
 int main(){
-    cout << rootdir << endl;
     string userOption = " ";
     fillVector();
     for(int i = 0; i < entrys.size(); i++){
         cout << entrys.at(i).toString() << endl;
     }
 
-    cout << endl << "0. Add/Edit Entry" << endl << "~. to delete a entry" << endl << "s. to save changes" << endl 
-         << "q. to save and quit" << endl << "x. to quit without saving" << endl << "a. to backup all to folder" << endl;
     while(userOption != "q"){
-        cout << "Select an option: ";
-        cin >> userOption;
+        userOption = prompt();
         userOption = stlow(userOption);
         switch(userOption.at(0)){
             case '0':
                 addEntry();
-                for(Entry i: entrys){cout << i.toCommit() << endl;}
+                for(Entry i: entrys){
+                    cout << i.toCommit() << endl;
+                }
             break;
             case '~':
                 deleteEntry();
@@ -201,13 +207,13 @@ int main(){
             case 'a':
                 for(Entry i: entrys){
                     
-                    zipUp(i.getPath(), i.getName());
+                    archive(i.getPath(), i.getName());
                 }
                 cout << endl << "Backed up entry(s): ";
                 for(Entry i : entrys){ 
-                    cout << i.getName() << " ";
+                    cout << "\"" << i.getName() << "\"" << " ";
                 }
-                cout << "to path " << backupdir << endl;
+                cout << "to path " << backupDir << endl;
             break;
             case 'q':
                 commit();
@@ -222,14 +228,15 @@ int main(){
                 try {
                     userNum = stoi(userOption);
                     if(userNum > entrys.size()){
-                        cout << "Not a valid entry";
+                        cout << "Not a valid entry" << endl;
                     } else {
                         cout << entrys.at(userNum - 1).toString() << endl;
+                        archive(entrys.at(userNum - 1).getPath(), entrys.at(userNum - 1).getName());
+                        prompt();
                     }
                 } catch (invalid_argument){
                     cout << "Not a valid input " << endl;
                 }
-                
             break;
         }
         // userOption = "q"; // for testing 

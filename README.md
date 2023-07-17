@@ -1,2 +1,2 @@
 # Backup
-A WIP program to backup game files
+A WIP program to backup files

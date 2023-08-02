@@ -1,6 +1,6 @@
 # ZipUp - Backup Tool
 A WIP program to backup files
-
+Requires 7zip to be installed (for now) and executable folder added to PATH environmental variable. 
 
 Some Plans: <br>
 Finish the concept idea which uses shell commands. <br>

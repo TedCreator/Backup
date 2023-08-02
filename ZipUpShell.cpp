@@ -6,12 +6,20 @@
 #include <iterator>
 #include <algorithm>
 #include <vector>
-using namespace std;
+//------------TODO-----------------
+//
+//CHANGE text file to be JSON/another data storing file format.
+//CHANGE zipping method to use a zipping (ziplib?) library with similar functionality to 7zip
+//       also fixes/removes using unsafe, non-portable & code injection vulnerable system() method
+//
+
+
+using namespace std; //bad practice, will change later
 
 fstream root;
 string userEnv = getenv("USERPROFILE");
-string backupDir = R"(C:\Games\BACKUP\)";
-string rootDir = backupDir + "entrylocations.txt";
+string backupDir = R"(F:\BACKUP\)";
+string rootDir = backupDir + "entrylocations.txt"; 
 string backupPath = "\"" + backupDir + "\"";
 
 class Entry {
@@ -62,6 +70,7 @@ class Entry {
             return ret;
         }
 };
+
 
 vector<Entry> entrys;
 string stlow(string str){
@@ -131,12 +140,11 @@ void deleteEntry(){
     cout << "What entry do you want to delete? " << endl << "Enter the name: ";
     cin >> entry;
     entry = stlow(entry);
-    cout << entry;
-    // for(auto & element : entrys){
-    //     if(element.getName() == entry){
-    //         entrys.erase(entrys.begin()+element.getLine() - 1);
-    //     }
-    // }
+    for(auto & element : entrys){
+        if(element.getName() == entry){
+            entrys.erase(entrys.begin()+element.getLine() - 1);
+        }
+    }
 }
 void fillVector(){
     root.open(rootDir, ios::in);
@@ -155,7 +163,7 @@ void fillVector(){
     }
     root.close();
 }
-void commit(){
+void dbCommit(){ //file database committing method
     root.open(rootDir, ios::out);
     for(auto & element : entrys){
         root.clear();
@@ -163,22 +171,28 @@ void commit(){
     }
     root.close();
 }
-void archive(string saveloc, string entryName){
+void zipUp(string saveloc, string entryName){
     time_t tt = chrono::system_clock::to_time_t(chrono::system_clock::now());
     tm utc_tm = *gmtime(&tt);
 
-    //file name idea is "nameOfEntry month-day-year-?h?m?s"
+    //file name idea is "nameOfEntry month-day-year-?h?m?s" .zip
     string fileName = entryName + " " + to_string(utc_tm.tm_mon + 1) + "-" + to_string(utc_tm.tm_mday) + "-" + to_string(utc_tm.tm_year + 1900) 
                 + "-" + to_string(utc_tm.tm_hour-5) + "h" + to_string(utc_tm.tm_min) + "m" + to_string(utc_tm.tm_sec) + "s";
 
-    //change to use tar command
+    //idea command is "cd file-location 7z a"
     string cmd = "cd \"" + saveloc + "\" & 7z a \"" + fileName + ".zip\"";
     cmd += " & move \"" + fileName + ".zip\" " + backupDir;
-    system(cmd.c_str());
+    cout << cmd;
+    system(cmd.c_str()); //unsafe, non-portable method & vulnerable to code injection, but using for concept's sake.
 }
 string prompt(){
-    cout << endl << "0. Add/Edit Entry" << endl << "~. to delete a entry" << endl << "s. to save changes" << endl 
-         << "q. to save and quit" << endl << "x. to quit without saving" << endl << "a. to backup all to folder" << endl;
+    for(int i = 0; i < entrys.size(); i++){
+        cout << entrys.at(i).toString() << endl;
+    }
+    cout << "-----------------------------------------------------------------------------------" << endl 
+    << "0. Add/Edit Entry" << endl << "~. to delete a entry" << endl 
+    << "s. to save changes (current entry list will overwrite any since last save)" << endl 
+    << "q. to save and quit" << endl << "x. to quit without saving" << endl << "a. to backup all to folder" << endl;
     cout << "Select an option: ";
     string userOption;
     cin >> userOption;
@@ -187,13 +201,12 @@ string prompt(){
 int main(){
     string userOption = " ";
     fillVector();
-    for(int i = 0; i < entrys.size(); i++){
-        cout << entrys.at(i).toString() << endl;
-    }
+    
 
     while(userOption != "q"){
         userOption = prompt();
         userOption = stlow(userOption);
+
         switch(userOption.at(0)){
             case '0':
                 addEntry();
@@ -207,7 +220,7 @@ int main(){
             case 'a':
                 for(Entry i: entrys){
                     
-                    archive(i.getPath(), i.getName());
+                    zipUp(i.getPath(), i.getName());
                 }
                 cout << endl << "Backed up entry(s): ";
                 for(Entry i : entrys){ 
@@ -216,30 +229,37 @@ int main(){
                 cout << "to path " << backupDir << endl;
             break;
             case 'q':
-                commit();
+                dbCommit();
                 exit(0);
             case 's':
-            commit();
+            dbCommit();
             break;
             case 'x':
+                cout << " ** Are you sure you want to end program? This will not save any of your entry changes. ** " 
+                     << endl << "Enter the letter y to confirm: ";
+                cin >> userOption;
+                if(stlow(userOption).at(0) != 'y'){
+                    userOption = " ";
+                    break;
+                }
                 exit(0);
             default:
                 int userNum;
                 try {
                     userNum = stoi(userOption);
                     if(userNum > entrys.size()){
-                        cout << "Not a valid entry" << endl;
+                        cout << " ** Not a valid entry ** " << endl;
                     } else {
                         cout << entrys.at(userNum - 1).toString() << endl;
-                        archive(entrys.at(userNum - 1).getPath(), entrys.at(userNum - 1).getName());
+                        zipUp(entrys.at(userNum - 1).getPath(), entrys.at(userNum - 1).getName());
                         prompt();
                     }
                 } catch (invalid_argument){
-                    cout << "Not a valid input " << endl;
+                    cout << " ** Not a valid input **" << endl;
                 }
             break;
         }
-        // userOption = "q"; // for testing 
+        // userOption = "q"; // hardcode for testing 
     }
 }
 

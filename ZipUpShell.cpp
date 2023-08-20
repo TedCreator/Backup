@@ -6,9 +6,12 @@
 #include <iterator>
 #include <algorithm>
 #include <vector>
+#include "rapidjson/writer.h"
+#include "rapidjson/document.h"
+#include "rapidjson/stringbuffer.h"
 //------------TODO-----------------
 //
-//CHANGE text file to be JSON/another data storing file format.
+//CURR -> CHANGE text file to be JSON/another data storing file format.
 //CHANGE zipping method to use a zipping (ziplib?) library with similar functionality to 7zip
 //       also fixes/removes using unsafe, non-portable & code injection vulnerable system() method
 //
@@ -22,11 +25,10 @@ string backupDir = R"(F:\BACKUP\)";
 string rootDir = backupDir + "entrylocations.txt"; 
 string backupPath = "\"" + backupDir + "\"";
 
-class Entry {
-    public: 
-        string name;
+struct Entry {
         int line;
-        string savepath;
+        string name;
+        string filepath;
         Entry(){
             line = 0;
         }
@@ -35,21 +37,12 @@ class Entry {
         Entry(int place, string entry, string path){
             name = entry;
             line = place;
-            savepath = path;
+            filepath = path;
         }
         Entry(string entry, string path){
             name = entry;
             line = -1;
-            savepath = path;
-        }
-        string getName(){
-            return name;
-        }
-        int getLine(){
-            return line;
-        }
-        string getPath(){
-            return savepath;
+            filepath = path;
         }
         void setName(string entry){
             name = entry;
@@ -58,15 +51,15 @@ class Entry {
             line = place;
         }
         void setPath(string path){
-            savepath = path;
+            filepath = path;
         }
         string toCommit(){
-            return name + "{" + savepath + "}";
+            return name + "{" + filepath + "}";
         }
         const string toString(){
             string ret;
             ret += to_string(line); 
-            ret += ". " + name + " : " + savepath;
+            ret += ". " + name + " : " + filepath;
             return ret;
         }
 };
@@ -83,7 +76,7 @@ string stlow(string str){
 }
 Entry searchEntrys(string entry){
    for(auto & element : entrys){
-        if(stlow(element.getName()) == stlow(entry)){
+        if(stlow(element.name) == stlow(entry)){
             return element;
         }
     }
@@ -91,7 +84,7 @@ Entry searchEntrys(string entry){
 }
 int findPosInVector(Entry entry){
     for(int i = 0; i < entrys.size(); i++){
-        if(entrys.at(i).getName() == entry.getName()){
+        if(entrys.at(i).name == entry.name){
             return i;
         }
     }
@@ -122,14 +115,14 @@ void addEntry(){
     getline(cin, input);
     newEntry.setName(input);
     Entry searchedEntry = searchEntrys(input);
-    if(searchedEntry.getName().size() < 1){
+    if(searchedEntry.name.size() < 1){
         newEntry.setName(input);
         cout << "Enter file path to be backed up: ";
         getline(cin, input);
         newEntry.setPath(input);
         entrys.push_back(newEntry);
     } else { 
-        cout << "Entry " + input + " already exists with path: " << searchedEntry.getPath() << endl;
+        cout << "Entry " + input + " already exists with path: " << searchedEntry.filepath << endl;
         cout << "Editing." << endl;
         newEntry = editEntry(searchedEntry);
         entrys.at(findPosInVector(searchedEntry)) = newEntry;
@@ -141,8 +134,8 @@ void deleteEntry(){
     cin >> entry;
     entry = stlow(entry);
     for(auto & element : entrys){
-        if(element.getName() == entry){
-            entrys.erase(entrys.begin()+element.getLine() - 1);
+        if(element.name == entry){
+            entrys.erase(entrys.begin() + element.line - 1);
         }
     }
 }
@@ -162,6 +155,35 @@ void fillVector(){
         count++;
     }
     root.close();
+}
+string vectorToJSONString(const std::vector<Entry>& entries) {
+    rapidjson::Document doc;
+    doc.SetArray();
+
+    //goes through each entry in the vector & adds the ID (line), name & filepath to the json entry.
+    for (const auto& entry : entries) {
+        rapidjson::Value val;
+        val.SetObject();
+         val.AddMember("ID", entry.line, doc.GetAllocator());
+        val.AddMember("name", rapidjson::StringRef(entry.name.c_str()), doc.GetAllocator());
+        val.AddMember("filepath", rapidjson::StringRef(entry.filepath.c_str()), doc.GetAllocator());
+        doc.PushBack(val, doc.GetAllocator());
+    }
+
+    //converts the json entry to a string & returns it.
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    doc.Accept(writer);
+    return buffer.GetString();
+}
+void jsonCommit(){
+    ofstream outFile("entrysdb.txt");
+    if(outFile.is_open()){
+        outFile << vectorToJSONString(entrys);
+        outFile.close();
+    } else {
+        cout << "Error opening file" << endl;
+    }
 }
 void dbCommit(){ //file database committing method
     root.open(rootDir, ios::out);
@@ -219,17 +241,16 @@ int main(){
             break;
             case 'a':
                 for(Entry i: entrys){
-                    
-                    zipUp(i.getPath(), i.getName());
+                    zipUp(i.filepath, i.name);
                 }
                 cout << endl << "Backed up entry(s): ";
                 for(Entry i : entrys){ 
-                    cout << "\"" << i.getName() << "\"" << " ";
+                    cout << "\"" << i.name << "\"" << " ";
                 }
                 cout << "to path " << backupDir << endl;
             break;
             case 'q':
-                dbCommit();
+                jsonCommit();
                 exit(0);
             case 's':
             dbCommit();
@@ -251,7 +272,7 @@ int main(){
                         cout << " ** Not a valid entry ** " << endl;
                     } else {
                         cout << entrys.at(userNum - 1).toString() << endl;
-                        zipUp(entrys.at(userNum - 1).getPath(), entrys.at(userNum - 1).getName());
+                        zipUp(entrys.at(userNum - 1).filepath, entrys.at(userNum - 1).name);
                         prompt();
                     }
                 } catch (invalid_argument){

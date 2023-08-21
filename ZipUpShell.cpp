@@ -12,22 +12,20 @@
 #include "rapidjson/istreamwrapper.h"
 /*                         -----------------TODO-----------------
 
-FIX bug with inputting the same entry to backup twice. (doesnt work until inputted 2x)
 CHANGE zipping method to use a zipping (ziplib?) library with similar functionality to 7zip
-    also fixes/removes using unsafe, non-portable & code injection vulnerable system() method
+    also removes using unsafe, non-portable & code injection vulnerable system() method
 ADD functionality to choose where the json file is stored instead of the default documents folder.
 
                      -----------------Completed-----------------
 
-CHANGE text file to be JSON/another data storing file format.
+CHANGED text file to be JSON data storage format using rapidjson library
 
 */
-using namespace std; //bad practice, will change later
+using namespace std; //convenient but bad practice, will change later
 
 fstream json;
 string backupLocation = R"(F:\BACKUP)";
-string docsFolder = getenv("USERPROFILE");
-string jsonDir = docsFolder + R"(\Documents\entrysdb.json)";
+string jsonDir = string(getenv("USERPROFILE")) + R"(\Documents\entrysdb.json)";
 struct Entry {
         int line;
         string name;
@@ -205,7 +203,7 @@ void jsonCommit(){
         cout << "Error opening file" << endl;
     }
 }
-void zipUp(string saveloc, string entryName){
+void ZipUp(string saveloc, string entryName){
     time_t tt = chrono::system_clock::to_time_t(chrono::system_clock::now());
     tm utc_tm = *gmtime(&tt);
 
@@ -223,7 +221,7 @@ string prompt(){
     for(int i = 0; i < entrys.size(); i++){
         cout << entrys.at(i).toString() << endl;
     }
-    cout << "-----------------------------------------------------------------------------------" << endl 
+    cout << "-----------------------------------------------------------------------------------------------" << endl 
     << "0. Add/Edit Entry" << endl << "~. to delete a entry" << endl 
     << "s. to save changes (overwrites last save)" << endl 
     << "q. to save and quit" << endl << "x. to quit without saving" << endl << "a. to backup all to folder" << endl;
@@ -239,7 +237,7 @@ int main(){
     
     while(userOption != "q"){
         userOption = prompt();
-
+        
         switch(userOption.at(0)){
             case '0':
                 addEntry();
@@ -251,14 +249,14 @@ int main(){
                 deleteEntry();
             break;
             case 'a':
-                for(Entry i: entrys){
-                    zipUp(i.filepath, i.name);
+                for(Entry ent: entrys){
+                    ZipUp(ent.filepath, ent.name);
                 }
-                cout << endl << "Backed up entry(s): ";
-                for(Entry i : entrys){ 
-                    cout << "\"" << i.name << "\"" << " ";
+                cout << endl << " **** Backed up entry(s): ";
+                for(Entry ent : entrys){ 
+                    cout << "\"" << ent.name << "\"" << " ";
                 }
-                cout << "to path " << docsFolder << endl;
+                cout << "to path " << backupLocation << " **** " << endl;
             break;
             case 'q':
                 jsonCommit();
@@ -267,7 +265,7 @@ int main(){
                 jsonCommit();
             break;
             case 'x':
-                cout << " ** Are you sure you want to end program? This will not save any of your entry changes. ** " 
+                cout << " **** Are you sure you want to end program? This will not save any of your entry changes. **** " 
                      << endl << "Enter the letter y to confirm: ";
                 cin >> userOption;
                 if(stlow(userOption).at(0) != 'y'){
@@ -280,14 +278,13 @@ int main(){
                 try {
                     userNum = stoi(userOption);
                     if(userNum > entrys.size()){
-                        cout << " ** Not a valid entry ** " << endl;
+                        cout << " **** Not a valid entry ****" << endl;
                     } else {
                         cout << entrys.at(userNum - 1).toString() << endl;
-                        zipUp(entrys.at(userNum - 1).filepath, entrys.at(userNum - 1).name);
-                        prompt();
+                        ZipUp(entrys.at(userNum - 1).filepath, entrys.at(userNum - 1).name);
                     }
                 } catch (invalid_argument){
-                    cout << " ** Not a valid input **" << endl;
+                    cout << " **** Not a valid input ****" << endl;
                 }
             break;
         }

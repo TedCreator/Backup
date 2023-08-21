@@ -10,22 +10,23 @@
 #include "rapidjson/document.h"
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/istreamwrapper.h"
-//------------TODO-----------------
-//
-// Completed. CHANGE text file to be JSON/another data storing file format.
-// FIX bug with inputting the same entry to backup twice. (doesnt work until inputted 2x)
-// CHANGE zipping method to use a zipping (ziplib?) library with similar functionality to 7zip
-//       also fixes/removes using unsafe, non-portable & code injection vulnerable system() method
-//
+/*                         -----------------TODO-----------------
 
+FIX bug with inputting the same entry to backup twice. (doesnt work until inputted 2x)
+CHANGE zipping method to use a zipping (ziplib?) library with similar functionality to 7zip
+    also fixes/removes using unsafe, non-portable & code injection vulnerable system() method
+ADD functionality to choose where the json file is stored instead of the default documents folder.
 
+                     -----------------Completed-----------------
+
+CHANGE text file to be JSON/another data storing file format.
+
+*/
 using namespace std; //bad practice, will change later
 
-fstream root;
 fstream json;
 string backupLocation = R"(F:\BACKUP)";
 string docsFolder = getenv("USERPROFILE");
-string rootDir = docsFolder + R"(\Documents\entrylocations.txt)"; 
 string jsonDir = docsFolder + R"(\Documents\entrysdb.json)";
 struct Entry {
         int line;
@@ -294,23 +295,3 @@ int main(){
         // userOption = "q"; // hardcode for testing 
     }
 }
-
-// wrote but not using
-// string searchRoot(string name){
-//     ifstream root;
-//     root.open(rootdir);
-//     size_t pos;
-//     string line;
-//     int count = 1;
-//     if(root.is_open()){
-//         while(getline(root, line)){
-//             pos = line.find(name);
-//             if(pos!=string::npos){
-//                 return line; 
-//             }
-//             count++;
-//         }
-//     }
-//     root.close();
-//     return "";
-// }

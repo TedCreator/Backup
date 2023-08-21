@@ -264,8 +264,7 @@ int main(){
                 jsonCommit();
                 exit(0);
             case 's':
-            jsonCommit();
-            dbCommit();
+                jsonCommit();
             break;
             case 'x':
                 cout << " ** Are you sure you want to end program? This will not save any of your entry changes. ** " 

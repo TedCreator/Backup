@@ -1,1 +1,0 @@
-[{"ID":1,"name":"Elden Ring","filepath":"C:\\Users\\takah\\AppData\\Roaming\\EldenRing"}]

@@ -9,10 +9,12 @@
 #include "rapidjson/writer.h"
 #include "rapidjson/document.h"
 #include "rapidjson/stringbuffer.h"
+#include "rapidjson/istreamwrapper.h"
 //------------TODO-----------------
 //
-//CURR -> CHANGE text file to be JSON/another data storing file format.
-//CHANGE zipping method to use a zipping (ziplib?) library with similar functionality to 7zip
+// Completed. CHANGE text file to be JSON/another data storing file format.
+// FIX bug with inputting the same entry to backup twice. (doesnt work until inputted 2x)
+// CHANGE zipping method to use a zipping (ziplib?) library with similar functionality to 7zip
 //       also fixes/removes using unsafe, non-portable & code injection vulnerable system() method
 //
 
@@ -20,11 +22,11 @@
 using namespace std; //bad practice, will change later
 
 fstream root;
-string userEnv = getenv("USERPROFILE");
-string backupDir = R"(F:\BACKUP\)";
-string rootDir = backupDir + "entrylocations.txt"; 
-string backupPath = "\"" + backupDir + "\"";
-
+fstream json;
+string backupLocation = R"(F:\BACKUP)";
+string docsFolder = getenv("USERPROFILE");
+string rootDir = docsFolder + R"(\Documents\entrylocations.txt)"; 
+string jsonDir = docsFolder + R"(\Documents\entrysdb.json)";
 struct Entry {
         int line;
         string name;
@@ -58,7 +60,7 @@ struct Entry {
         }
         const string toString(){
             string ret;
-            ret += to_string(line); 
+            ret += to_string(line + 1); 
             ret += ". " + name + " : " + filepath;
             return ret;
         }
@@ -116,6 +118,7 @@ void addEntry(){
     newEntry.setName(input);
     Entry searchedEntry = searchEntrys(input);
     if(searchedEntry.name.size() < 1){
+        newEntry.setLine(entrys.size());
         newEntry.setName(input);
         cout << "Enter file path to be backed up: ";
         getline(cin, input);
@@ -135,63 +138,71 @@ void deleteEntry(){
     entry = stlow(entry);
     for(auto & element : entrys){
         if(element.name == entry){
-            entrys.erase(entrys.begin() + element.line - 1);
+            entrys.erase(entrys.begin() + element.line);
         }
     }
 }
 void fillVector(){
-    root.open(rootDir, ios::in);
-    string line;
-    int pos;
-    string name;
-    string path;
-    int count = 1;
-    while (getline(root, line)) {  
-        pos = line.find('{');
-        name = line.substr(0, pos);
-        path = line.substr(pos + 1);
-        path = path.substr(0, path.size() - 1);
-        entrys.push_back(Entry(count, name, path));
-        count++;
+    using namespace rapidjson; //covers IStreamWrapper, Document, Sizetype, Value
+    json.open(jsonDir, ios::in);
+    if(json.is_open()){
+        IStreamWrapper isw(json);
+        Document doc;
+        doc.ParseStream(isw);
+
+        if(doc.IsArray()){
+            for(SizeType i = 0; i < doc.Size(); i++){
+                const Value& entry = doc[i];
+                if(entry.IsObject() && entry.HasMember("ID") && entry.HasMember("name") && entry.HasMember("filepath")){
+                    Entry vectorEntry;
+                    vectorEntry.setLine(entry["ID"].GetInt());
+                    vectorEntry.setName(entry["name"].GetString());
+                    vectorEntry.setPath(entry["filepath"].GetString());
+                    entrys.push_back(vectorEntry);
+                }
+            }
+        }
     }
-    root.close();
+    json.close();
 }
-string vectorToJSONString(const std::vector<Entry>& entries) {
-    rapidjson::Document doc;
+string vectorToJSONString() {
+    using namespace rapidjson; //covers Document, Value, StringRef, StringBuffer
+    Document doc;
     doc.SetArray();
 
+    //converts the json object to a string & returns it.
+    StringBuffer buffer;
+    Writer<StringBuffer> writer(buffer);
     //goes through each entry in the vector & adds the ID (line), name & filepath to the json entry.
-    for (const auto& entry : entries) {
-        rapidjson::Value val;
+    for (const auto& entry : entrys) {
+        Value val;
         val.SetObject();
-         val.AddMember("ID", entry.line, doc.GetAllocator());
-        val.AddMember("name", rapidjson::StringRef(entry.name.c_str()), doc.GetAllocator());
-        val.AddMember("filepath", rapidjson::StringRef(entry.filepath.c_str()), doc.GetAllocator());
+        val.AddMember("ID", entry.line, doc.GetAllocator());
+        val.AddMember("name", StringRef(entry.name.c_str()), doc.GetAllocator());
+        val.AddMember("filepath", StringRef(entry.filepath.c_str()), doc.GetAllocator());
         doc.PushBack(val, doc.GetAllocator());
     }
-
-    //converts the json entry to a string & returns it.
-    rapidjson::StringBuffer buffer;
-    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
     doc.Accept(writer);
-    return buffer.GetString();
+
+    //method to insert newline between entries to keep json readable
+    string jsonBuffer = buffer.GetString();
+    for (size_t i = 0; i < jsonBuffer.size() - 1; i++) {
+        if (jsonBuffer[i] == '}') {
+            jsonBuffer.insert(i + 2, "\n");
+            i++; // skips the newline character
+        }
+    }
+    
+    return jsonBuffer; //auto casts to a string due to return type
 }
 void jsonCommit(){
-    ofstream outFile("entrysdb.txt");
-    if(outFile.is_open()){
-        outFile << vectorToJSONString(entrys);
-        outFile.close();
+    json.open(jsonDir, ios::out);
+    if(json.is_open()){
+        json << vectorToJSONString();
+        json.close();
     } else {
         cout << "Error opening file" << endl;
     }
-}
-void dbCommit(){ //file database committing method
-    root.open(rootDir, ios::out);
-    for(auto & element : entrys){
-        root.clear();
-        root << element.toCommit() << endl;
-    }
-    root.close();
 }
 void zipUp(string saveloc, string entryName){
     time_t tt = chrono::system_clock::to_time_t(chrono::system_clock::now());
@@ -199,11 +210,11 @@ void zipUp(string saveloc, string entryName){
 
     //file name idea is "nameOfEntry month-day-year-?h?m?s" .zip
     string fileName = entryName + " " + to_string(utc_tm.tm_mon + 1) + "-" + to_string(utc_tm.tm_mday) + "-" + to_string(utc_tm.tm_year + 1900) 
-                + "-" + to_string(utc_tm.tm_hour-5) + "h" + to_string(utc_tm.tm_min) + "m" + to_string(utc_tm.tm_sec) + "s";
+                + " @ " + to_string(utc_tm.tm_hour-4) + "h" + to_string(utc_tm.tm_min) + "m" + to_string(utc_tm.tm_sec) + "s";
 
     //idea command is "cd file-location 7z a"
     string cmd = "cd \"" + saveloc + "\" & 7z a \"" + fileName + ".zip\"";
-    cmd += " & move \"" + fileName + ".zip\" " + backupDir;
+    cmd += " & move \"" + fileName + ".zip\" " + backupLocation;
     cout << cmd;
     system(cmd.c_str()); //unsafe, non-portable method & vulnerable to code injection, but using for concept's sake.
 }
@@ -213,21 +224,20 @@ string prompt(){
     }
     cout << "-----------------------------------------------------------------------------------" << endl 
     << "0. Add/Edit Entry" << endl << "~. to delete a entry" << endl 
-    << "s. to save changes (current entry list will overwrite any since last save)" << endl 
+    << "s. to save changes (overwrites last save)" << endl 
     << "q. to save and quit" << endl << "x. to quit without saving" << endl << "a. to backup all to folder" << endl;
     cout << "Select an option: ";
-    string userOption;
+    string userOption = "";
     cin >> userOption;
-    return userOption;
+    return stlow(userOption);
 }
 int main(){
+    cout << jsonDir << endl;
     string userOption = " ";
     fillVector();
     
-
     while(userOption != "q"){
         userOption = prompt();
-        userOption = stlow(userOption);
 
         switch(userOption.at(0)){
             case '0':
@@ -247,12 +257,13 @@ int main(){
                 for(Entry i : entrys){ 
                     cout << "\"" << i.name << "\"" << " ";
                 }
-                cout << "to path " << backupDir << endl;
+                cout << "to path " << docsFolder << endl;
             break;
             case 'q':
                 jsonCommit();
                 exit(0);
             case 's':
+            jsonCommit();
             dbCommit();
             break;
             case 'x':

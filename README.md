@@ -8,4 +8,5 @@ Create a version of a command line integrated tool which can be used as a comman
 Create a version with a UI. <br>
 Combine these ideas to possibly create a "background" app which will backup files automatically in intervals when used as a continuously running app. <br>
 
+COMPLETED zipping method change to use a minizip library which recursively adds files to archive <br>
 COMPLETED migration to JSON data structure <br>

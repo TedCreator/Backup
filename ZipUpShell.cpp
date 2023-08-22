@@ -7,6 +7,7 @@
 #include <vector>
 
 // External Libraries included from.
+#include <windows.h>
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations" //for issues with iterator class being deprecated, but used by rapidjson
 //https://rapidjson.org/
 #include "extlibs/rapidjson/writer.h"
@@ -18,20 +19,17 @@
 #include "extlibs/minizip/zip.h"
 
 /*                         -----------------TODO-----------------
-
-CURR - CHANGE zipping method to use a zipping (ziplib?) library with similar functionality to 7zip
-    also removes using unsafe, non-portable & code injection vulnerable system() method
 ADD functionality to choose where the json file is stored instead of the default documents folder.
 
                         -----------------Completed-----------------
-
+CHANGED zipping method to use a zipping (minizip) library with similar functionality to 7zip
+    also removes using unsafe, non-portable & code injection vulnerable system() method
 CHANGED text file to be JSON data storage format using rapidjson library
 
 */
 using namespace std; //convenient but bad practice, will change later
-
 fstream json;
-const string backupLocation = R"(./Backup/)";
+const string backupLocation = R"(./Files/)";
 const string jsonDir = backupLocation + R"(entrysdb.json)";
 
 struct Entry {
@@ -145,7 +143,7 @@ void deleteEntry(){
         }
     }
 }
-void fillVector(){
+void fillVectorfromJSON(){
     using namespace rapidjson; //covers IStreamWrapper, Document, Sizetype, Value
     json.open(jsonDir, ios::in);
     if(json.is_open()){
@@ -207,11 +205,11 @@ void jsonCommit(){
         cout << "Error opening file" << endl;
     }
 }
-void recursiveZip(zipFile zip, const string& folderPath, const string& basePath){
+void recursiveZip(zipFile zip, const string& targetPath, const string& targetLoc){
 
-    for(const auto& element : filesystem::directory_iterator(folderPath)){
+    for(const auto& element : filesystem::directory_iterator(targetPath)){
         const string elementPath = element.path().string();
-        string elementName = elementPath.substr(basePath.size() + 1);
+        string elementName = elementPath.substr(targetLoc.size() + 1);
         FILE* source = fopen(elementPath.c_str(), "rb"); //Read + Binary mode
         if(element.is_regular_file()){
             zip_fileinfo zfi;
@@ -243,7 +241,7 @@ void recursiveZip(zipFile zip, const string& folderPath, const string& basePath)
             }
             // cout << element.path().string() << endl;
         } else if(element.is_directory()){
-            recursiveZip(zip, elementPath, basePath);
+            recursiveZip(zip, elementPath, targetLoc);
         }
     }
 }
@@ -264,20 +262,6 @@ void ZipUp(Entry entry){
     recursiveZip(zip, entry.filepath, entry.filepath);
     zipClose(zip, nullptr);
 }
-// void ZipUp(string saveloc, string entryName){
-//     time_t tt = chrono::system_clock::to_time_t(chrono::system_clock::now());
-//     tm utc_tm = *gmtime(&tt);
-
-//     //file name idea is "nameOfEntry month-day-year-?h?m?s" .zip
-//     string fileName = entryName + " " + to_string(utc_tm.tm_mon + 1) + "-" + to_string(utc_tm.tm_mday) + "-" + to_string(utc_tm.tm_year + 1900) 
-//                 + " @ " + to_string(utc_tm.tm_hour-4) + "h" + to_string(utc_tm.tm_min) + "m" + to_string(utc_tm.tm_sec) + "s";
-
-//     //idea command is "cd file-location 7z a"
-//     string cmd = "cd \"" + saveloc + "\" & 7z a \"" + fileName + ".zip\""; //zips the file
-//     cmd += " && mv \"" + fileName + ".zip\" " + backupLocation; //moves it to the location
-//     // cout << endl << cmd << endl;
-//     system(cmd.c_str()); //unsafe, non-portable method & vulnerable to code injection, but using for concept's sake.
-// }
 string prompt(){
     for(int i = 0; i < entrys.size(); i++){
         cout << entrys.at(i).toString() << endl;
@@ -287,19 +271,19 @@ string prompt(){
     << "s. to save changes (overwrites last save)" << endl 
     << "q. to save and quit" << endl << "x. to quit without saving" << endl << "a. to backup all to folder" << endl;
     cout << "Select an option: ";
-    string userOption = "";
+    string userOption;
     cin >> userOption;
     return stlow(userOption);
 }
 int main(){
-    cout << jsonDir << endl;
-    string userOption = " ";
-    fillVector();
+    string userOption = " "; //for first run
+    //Creates the ./Backup directory if it doesn't already exist
+    if(filesystem::exists(backupLocation) || filesystem::create_directory(backupLocation)){
+        fillVectorfromJSON();
+    }
     
-
-
-
-    while(userOption != "q"){
+    
+    do{
         userOption = prompt();
         
         switch(userOption.at(0)){
@@ -353,5 +337,5 @@ int main(){
             break;
         }
         // userOption = "q"; // hardcode for testing 
-    }
+    } while(userOption != "q");
 }

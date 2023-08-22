@@ -3,20 +3,27 @@
 #include <iostream>
 #include <fstream>
 #include <filesystem>
-#include <iterator>
 #include <algorithm>
 #include <vector>
-#include "rapidjson/writer.h"
-#include "rapidjson/document.h"
-#include "rapidjson/stringbuffer.h"
-#include "rapidjson/istreamwrapper.h"
+
+// External Libraries included from.
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations" //for issues with iterator class being deprecated, but used by rapidjson
+//https://rapidjson.org/
+#include "extlibs/rapidjson/writer.h"
+#include "extlibs/rapidjson/document.h"
+#include "extlibs/rapidjson/stringbuffer.h"
+#include "extlibs/rapidjson/istreamwrapper.h"
+//Minizip library contrib of zlib library: https://www.zlib.net/
+//https://chromium.googlesource.com/external/github.com/nmoinvaz/minizip/+/2.3.8/README.md
+#include "extlibs/minizip/zip.h"
+
 /*                         -----------------TODO-----------------
 
-CHANGE zipping method to use a zipping (ziplib?) library with similar functionality to 7zip
+CURR - CHANGE zipping method to use a zipping (ziplib?) library with similar functionality to 7zip
     also removes using unsafe, non-portable & code injection vulnerable system() method
 ADD functionality to choose where the json file is stored instead of the default documents folder.
 
-                     -----------------Completed-----------------
+                        -----------------Completed-----------------
 
 CHANGED text file to be JSON data storage format using rapidjson library
 
@@ -24,25 +31,22 @@ CHANGED text file to be JSON data storage format using rapidjson library
 using namespace std; //convenient but bad practice, will change later
 
 fstream json;
-string backupLocation = R"(F:\BACKUP)";
-string jsonDir = string(getenv("USERPROFILE")) + R"(\Documents\entrysdb.json)";
+const string backupLocation = R"(./Backup/)";
+const string jsonDir = backupLocation + R"(entrysdb.json)";
+
 struct Entry {
         int line;
         string name;
         string filepath;
         Entry(){
+            name = "unnamed";
             line = 0;
+            filepath = R"(no/path/given)";
         }
-        ~Entry(){
-        }
+        ~Entry(){}
         Entry(int place, string entry, string path){
             name = entry;
             line = place;
-            filepath = path;
-        }
-        Entry(string entry, string path){
-            name = entry;
-            line = -1;
             filepath = path;
         }
         void setName(string entry){
@@ -203,25 +207,82 @@ void jsonCommit(){
         cout << "Error opening file" << endl;
     }
 }
-void ZipUp(string saveloc, string entryName){
+void recursiveZip(zipFile zip, const string& folderPath, const string& basePath){
+
+    for(const auto& element : filesystem::directory_iterator(folderPath)){
+        const string elementPath = element.path().string();
+        string elementName = elementPath.substr(basePath.size() + 1);
+        FILE* source = fopen(elementPath.c_str(), "rb"); //Read + Binary mode
+        if(element.is_regular_file()){
+            zip_fileinfo zfi;
+            memset(&zfi, 0, sizeof(zip_fileinfo));
+
+            //reference https://github.com/madler/zlib/blob/master/contrib/minizip/minizip.c
+            //reference https://chromium.googlesource.com/external/github.com/nmoinvaz/minizip/+/refs/heads/1.2/minizip.c
+            zipOpenNewFileInZip3_64(
+                zip,
+                elementName.c_str(),
+                &zfi,
+                nullptr, 0, nullptr, 0, nullptr,
+                Z_DEFLATED,
+                Z_DEFAULT_COMPRESSION, 0,
+                -MAX_WBITS, DEF_MEM_LEVEL, Z_DEFAULT_STRATEGY,
+                nullptr, 0, 1
+            );
+
+            if(source){
+                char buffer[8096];
+                int bytes;
+                
+                while((bytes = fread(buffer, 1, sizeof(buffer), source)) > 0){
+                    zipWriteInFileInZip(zip, buffer, bytes);
+                }
+                fclose(source);
+            } else {
+                cerr << "Error writing to file" << endl;
+            }
+            // cout << element.path().string() << endl;
+        } else if(element.is_directory()){
+            recursiveZip(zip, elementPath, basePath);
+        }
+    }
+}
+void ZipUp(Entry entry){
     time_t tt = chrono::system_clock::to_time_t(chrono::system_clock::now());
     tm utc_tm = *gmtime(&tt);
 
     //file name idea is "nameOfEntry month-day-year-?h?m?s" .zip
-    string fileName = entryName + " " + to_string(utc_tm.tm_mon + 1) + "-" + to_string(utc_tm.tm_mday) + "-" + to_string(utc_tm.tm_year + 1900) 
-                + " @ " + to_string(utc_tm.tm_hour-4) + "h" + to_string(utc_tm.tm_min) + "m" + to_string(utc_tm.tm_sec) + "s";
-
-    //idea command is "cd file-location 7z a"
-    string cmd = "cd \"" + saveloc + "\" & 7z a \"" + fileName + ".zip\"";
-    cmd += " & move \"" + fileName + ".zip\" " + backupLocation;
-    cout << cmd;
-    system(cmd.c_str()); //unsafe, non-portable method & vulnerable to code injection, but using for concept's sake.
+    const string fileName = entry.name + " " + to_string(utc_tm.tm_mon + 1) + "-" + to_string(utc_tm.tm_mday) + "-" + to_string(utc_tm.tm_year + 1900) 
+                    + " @ " + to_string(utc_tm.tm_hour-4) + "h" + to_string(utc_tm.tm_min) + "m" + to_string(utc_tm.tm_sec) + "s" + ".zip";
+    const string zipPath = backupLocation + fileName;
+    
+    zipFile zip = zipOpen(zipPath.c_str(), APPEND_STATUS_CREATE);
+    if(!zip){
+        cerr << "Error creating zip archive. Likely invalid save path." << endl;
+        return;
+    }
+    recursiveZip(zip, entry.filepath, entry.filepath);
+    zipClose(zip, nullptr);
 }
+// void ZipUp(string saveloc, string entryName){
+//     time_t tt = chrono::system_clock::to_time_t(chrono::system_clock::now());
+//     tm utc_tm = *gmtime(&tt);
+
+//     //file name idea is "nameOfEntry month-day-year-?h?m?s" .zip
+//     string fileName = entryName + " " + to_string(utc_tm.tm_mon + 1) + "-" + to_string(utc_tm.tm_mday) + "-" + to_string(utc_tm.tm_year + 1900) 
+//                 + " @ " + to_string(utc_tm.tm_hour-4) + "h" + to_string(utc_tm.tm_min) + "m" + to_string(utc_tm.tm_sec) + "s";
+
+//     //idea command is "cd file-location 7z a"
+//     string cmd = "cd \"" + saveloc + "\" & 7z a \"" + fileName + ".zip\""; //zips the file
+//     cmd += " && mv \"" + fileName + ".zip\" " + backupLocation; //moves it to the location
+//     // cout << endl << cmd << endl;
+//     system(cmd.c_str()); //unsafe, non-portable method & vulnerable to code injection, but using for concept's sake.
+// }
 string prompt(){
     for(int i = 0; i < entrys.size(); i++){
         cout << entrys.at(i).toString() << endl;
     }
-    cout << "-----------------------------------------------------------------------------------------------" << endl 
+    cout << "-----------Enter any above number from list to backup that entry-----------" << endl 
     << "0. Add/Edit Entry" << endl << "~. to delete a entry" << endl 
     << "s. to save changes (overwrites last save)" << endl 
     << "q. to save and quit" << endl << "x. to quit without saving" << endl << "a. to backup all to folder" << endl;
@@ -235,6 +296,9 @@ int main(){
     string userOption = " ";
     fillVector();
     
+
+
+
     while(userOption != "q"){
         userOption = prompt();
         
@@ -250,7 +314,7 @@ int main(){
             break;
             case 'a':
                 for(Entry ent: entrys){
-                    ZipUp(ent.filepath, ent.name);
+                    ZipUp(ent);
                 }
                 cout << endl << " **** Backed up entry(s): ";
                 for(Entry ent : entrys){ 
@@ -281,7 +345,7 @@ int main(){
                         cout << " **** Not a valid entry ****" << endl;
                     } else {
                         cout << entrys.at(userNum - 1).toString() << endl;
-                        ZipUp(entrys.at(userNum - 1).filepath, entrys.at(userNum - 1).name);
+                        ZipUp(entrys.at(userNum - 1));
                     }
                 } catch (invalid_argument){
                     cout << " **** Not a valid input ****" << endl;

@@ -10,13 +10,13 @@
 #include <windows.h>
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations" //for issues with iterator class being deprecated, but used by rapidjson
 //https://rapidjson.org/
-#include "extlibs/rapidjson/writer.h"
-#include "extlibs/rapidjson/document.h"
-#include "extlibs/rapidjson/stringbuffer.h"
-#include "extlibs/rapidjson/istreamwrapper.h"
+#include "rapidjson/writer.h"
+#include "rapidjson/document.h"
+#include "rapidjson/stringbuffer.h"
+#include "rapidjson/istreamwrapper.h"
 //Minizip library contrib of zlib library: https://www.zlib.net/
 //https://chromium.googlesource.com/external/github.com/nmoinvaz/minizip/+/2.3.8/README.md
-#include "extlibs/minizip/zip.h"
+#include "minizip/zip.h"
 
 /*                         -----------------TODO-----------------
 ADD functionality to choose where the json file is stored instead of the default documents folder.

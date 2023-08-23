@@ -118,7 +118,8 @@ void addEntry(){
     getline(cin, input);
     newEntry.setName(input);
     int existCheck = searchEntrys(input);
-    if(existCheck = -99){
+    cout << existCheck;
+    if(existCheck == -99){
         try{
             newEntry.setLine(entrys.size());
         } catch(std::out_of_range){
@@ -137,15 +138,12 @@ void addEntry(){
     }
 }
 void deleteEntry(){
-    string entry;
-    cout << "What entry do you want to delete? " << endl << "Enter the name: ";
+    int entry;
+    cout << "What entry do you want to delete? " << endl << "Enter the number: ";
     cin >> entry;
-    entry = stlow(entry);
-    for(auto & element : entrys){
-        if(element.name == entry){
-            entrys.erase(entrys.begin() + element.line);
-        }
-    }
+    entrys.erase(entrys.begin() + entry);
+    return;
+
 }
 void fillVectorfromJSON(){
     using namespace rapidjson; //covers IStreamWrapper, Document, Sizetype, Value
@@ -344,7 +342,7 @@ int main(){
         backupLocation = entrys.at(0).filepath.append("\\");
     }
 
-    string userOption = " "; //for first loop
+    string userOption = " "; //for first loop. also can use for testing with hardcoded 'q'
     while(userOption != "q"){
         userOption = prompt();
         
@@ -360,7 +358,9 @@ int main(){
             break;
             case 'a':
                 for(Entry ent: entrys){
-                    ZipUp(ent);
+                    if(ent.name != "BACKUPLOCATION"){
+                        ZipUp(ent);
+                    }
                 }
                 cout << endl << " **** Backed up entry(s): ";
                 for(Entry ent : entrys){ 
@@ -398,6 +398,5 @@ int main(){
                 }
             break;
         }
-        // userOption = "q"; // hardcode for testing 
     } 
 }

@@ -29,8 +29,8 @@ CHANGED text file to be JSON data storage format using rapidjson library
 */
 using namespace std; //convenient but bad practice, will change later
 fstream json;
-const string backupLocation = R"(./Files/)";
-const string jsonDir = backupLocation + R"(entrysdb.json)";
+string backupLocation;
+string jsonDir = "./entrysdb.json";
 
 struct Entry {
         int line;
@@ -61,7 +61,7 @@ struct Entry {
         }
         const string toString(){
             string ret;
-            ret += to_string(line + 1); 
+            ret += to_string(line); 
             ret += ". " + name + " : " + filepath;
             return ret;
         }
@@ -77,13 +77,13 @@ string stlow(string str){
     }
     return ret;
 }
-Entry searchEntrys(string entry){
-   for(auto & element : entrys){
-        if(stlow(element.name) == stlow(entry)){
-            return element;
+int searchEntrys(string entry){ //returns position of entry in vector
+   for(int i = 0; i < entrys.size(); i++){
+        if(stlow(entrys.at(i).name) == stlow(entry)){
+            return i;
         }
     }
-    return Entry(0, "", "");
+    return -99;
 }
 int findPosInVector(Entry entry){
     for(int i = 0; i < entrys.size(); i++){
@@ -117,19 +117,23 @@ void addEntry(){
     cin.ignore();
     getline(cin, input);
     newEntry.setName(input);
-    Entry searchedEntry = searchEntrys(input);
-    if(searchedEntry.name.size() < 1){
-        newEntry.setLine(entrys.size());
+    int existCheck = searchEntrys(input);
+    if(existCheck = -99){
+        try{
+            newEntry.setLine(entrys.size());
+        } catch(std::out_of_range){
+            newEntry.setLine(0);
+        }
         newEntry.setName(input);
         cout << "Enter file path to be backed up: ";
         getline(cin, input);
         newEntry.setPath(input);
         entrys.push_back(newEntry);
     } else { 
-        cout << "Entry " + input + " already exists with path: " << searchedEntry.filepath << endl;
+        cout << "Entry " + input + " already exists with path: " << entrys.at(existCheck).filepath << endl;
         cout << "Editing." << endl;
-        newEntry = editEntry(searchedEntry);
-        entrys.at(findPosInVector(searchedEntry)) = newEntry;
+        newEntry = editEntry(entrys.at(existCheck));
+        entrys.at(findPosInVector(entrys.at(existCheck))) = newEntry;
     }
 }
 void deleteEntry(){
@@ -166,7 +170,7 @@ void fillVectorfromJSON(){
     }
     json.close();
 }
-string vectorToJSONString() {
+/* string vectorToJSONString() {
     using namespace rapidjson; //covers Document, Value, StringRef, StringBuffer
     Document doc;
     doc.SetArray();
@@ -195,11 +199,38 @@ string vectorToJSONString() {
     }
     
     return jsonBuffer; //auto casts to a string due to return type
-}
+}*/
 void jsonCommit(){
+    using namespace rapidjson; //covers Document, Value, StringRef, StringBuffer
+    Document doc;
+    doc.SetArray();
+
+    //converts the json object to a string & returns it.
+    StringBuffer buffer;
+    Writer<StringBuffer> writer(buffer);
+    //goes through each entry in the vector & adds the ID (line), name & filepath to the json entry.
+    for (int i = 0; i < entrys.size(); i++) {
+        Value val;
+        val.SetObject();
+        val.AddMember("ID", entrys.at(i).line, doc.GetAllocator());
+        val.AddMember("name", StringRef(entrys.at(i).name.c_str()), doc.GetAllocator());
+        val.AddMember("filepath", StringRef(entrys.at(i).filepath.c_str()), doc.GetAllocator());
+        doc.PushBack(val, doc.GetAllocator());
+    }
+    doc.Accept(writer);
+    cout << buffer.GetString() << endl;
+    //method to insert newline between entries to keep json readable
+    string jsonBuffer = buffer.GetString();
+    for (size_t i = 0; i < jsonBuffer.size() - 1; i++) {
+        if (jsonBuffer[i] == '}') {
+            jsonBuffer.insert(i + 2, "\n");
+            i++; // skips the newline character
+        }
+    }
+
     json.open(jsonDir, ios::out);
     if(json.is_open()){
-        json << vectorToJSONString();
+        json << jsonBuffer;
         json.close();
     } else {
         cout << "Error opening file" << endl;
@@ -208,8 +239,10 @@ void jsonCommit(){
 void recursiveZip(zipFile zip, const string& targetPath, const string& targetLoc){
 
     for(const auto& element : filesystem::directory_iterator(targetPath)){
+        
         const string elementPath = element.path().string();
         string elementName = elementPath.substr(targetLoc.size() + 1);
+        cout << "***" <<  elementName << endl;
         FILE* source = fopen(elementPath.c_str(), "rb"); //Read + Binary mode
         if(element.is_regular_file()){
             zip_fileinfo zfi;
@@ -262,8 +295,28 @@ void ZipUp(Entry entry){
     recursiveZip(zip, entry.filepath, entry.filepath);
     zipClose(zip, nullptr);
 }
+void initBackupPath(string path){
+    using namespace rapidjson;
+    Document doc;
+    doc.SetArray();
+
+    //converts the json object to a string & returns it.
+    StringBuffer buffer;
+    Writer<StringBuffer> writer(buffer);
+    //makes a json value entry with -1 (unique to the backuppath), a unique name and the inputted filepath
+    Value val;
+    val.SetObject();
+    val.AddMember("ID", 0, doc.GetAllocator()); //reserving the ID 0 for 
+    val.AddMember("name", StringRef("BACKUPLOCATION"), doc.GetAllocator());
+    val.AddMember("filepath", StringRef(path.c_str()), doc.GetAllocator());
+    doc.PushBack(val, doc.GetAllocator());
+    doc.Accept(writer);
+    json.open(jsonDir, ios::out);
+    json << buffer.GetString();
+    json.close();
+}
 string prompt(){
-    for(int i = 0; i < entrys.size(); i++){
+    for(int i = 1; i < entrys.size(); i++){
         cout << entrys.at(i).toString() << endl;
     }
     cout << "-----------Enter any above number from list to backup that entry-----------" << endl 
@@ -276,14 +329,23 @@ string prompt(){
     return stlow(userOption);
 }
 int main(){
-    string userOption = " "; //for first run
-    //Creates the ./Backup directory if it doesn't already exist
-    if(filesystem::exists(backupLocation) || filesystem::create_directory(backupLocation)){
-        fillVectorfromJSON();
+    if(!filesystem::exists("entrysdb.json")){
+            json.open("entrysdb.json", ios::out);
+            json.close();
     }
-    
-    
-    do{
+    fillVectorfromJSON();
+    if(searchEntrys("BACKUPLOCATION") == -99){
+        cout << "You have not set a folder to save backed-up files" << endl;
+        cout << "Enter a path: ";
+        string userPath;
+        getline(cin, userPath);
+        initBackupPath(userPath);
+    } else {
+        backupLocation = entrys.at(0).filepath.append("\\");
+    }
+
+    string userOption = " "; //for first loop
+    while(userOption != "q"){
         userOption = prompt();
         
         switch(userOption.at(0)){
@@ -328,8 +390,8 @@ int main(){
                     if(userNum > entrys.size()){
                         cout << " **** Not a valid entry ****" << endl;
                     } else {
-                        cout << entrys.at(userNum - 1).toString() << endl;
-                        ZipUp(entrys.at(userNum - 1));
+                        cout << entrys.at(userNum).toString() << endl;
+                        ZipUp(entrys.at(userNum));
                     }
                 } catch (invalid_argument){
                     cout << " **** Not a valid input ****" << endl;
@@ -337,5 +399,5 @@ int main(){
             break;
         }
         // userOption = "q"; // hardcode for testing 
-    } while(userOption != "q");
+    } 
 }

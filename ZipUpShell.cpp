@@ -327,11 +327,12 @@ string prompt(){
     return stlow(userOption);
 }
 int main(){
+    //creates database file if it doesn't exist
     if(!filesystem::exists("entrysdb.json")){
-            json.open("entrysdb.json", ios::out);
-            json.close();
+            ofstream("entrysdb.json");
     }
     fillVectorfromJSON();
+
     if(searchEntrys("BACKUPLOCATION") == -99){
         cout << "You have not set a folder to save backed-up files" << endl;
         cout << "Enter a path: ";
@@ -342,7 +343,7 @@ int main(){
         backupLocation = entrys.at(0).filepath.append("\\");
     }
 
-    string userOption = " "; //for first loop. also can use for testing with hardcoded 'q'
+    string userOption = " ";
     while(userOption != "q"){
         userOption = prompt();
         

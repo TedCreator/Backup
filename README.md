@@ -2,7 +2,7 @@
 <br/>
 
 
-<h2> ZipUp - Backup Tool </h1>
+<h1> ZipUp - Backup Tool </h1>
 
 
 

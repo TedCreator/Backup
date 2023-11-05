@@ -1,6 +1,5 @@
 <h1 align="center"><a href="https://tedcreator.github.io/">Landing Page - TedCreator.github.io/</a></h1>
 <br/>
-<br/>
 
 
 <h2> ZipUp - Backup Tool </h1>

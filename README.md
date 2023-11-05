@@ -1,3 +1,6 @@
+<h1><a href="https://tedcreator.github.io/">Landing Page - TedCreator.github.io/</a></h1>
+
+<br>
 # ZipUp - Backup Tool
 A WIP program to backup files <br>
 Requires 7zip to be installed (for now) and executable folder added to PATH environmental variable. <br>

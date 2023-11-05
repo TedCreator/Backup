@@ -1,4 +1,4 @@
-<h1 style="margin: auto; width: 50%; border: 1px red; padding: 10px;><a href="https://tedcreator.github.io/">Landing Page - TedCreator.github.io/</a></h1>
+<h1 style="margin: auto; width: 50%; border: 1px red; padding: 10px;"><a href="https://tedcreator.github.io/">Landing Page - TedCreator.github.io/</a></h1>
 
 
 

@@ -1,8 +1,8 @@
-<h1 style="align:center;"><a href="https://tedcreator.github.io/">Landing Page - TedCreator.github.io/</a></h1>
+<h1 style="align=center;"><a href="https://tedcreator.github.io/">Landing Page - TedCreator.github.io/</a></h1>
 
 
 
-<h1> ZipUp - Backup Tool </h1>
+<h2> ZipUp - Backup Tool </h1>
 
 
 
